@@ -18,8 +18,7 @@ endif()
 
 include_directories(${OpenCV_DIR}/include
                     ${CMAKE_CURRENT_SOURCE_DIR}/third/ncnn/include/ncnn 
-                    ${CMAKE_CURRENT_SOURCE_DIR}/include 
-                    ${CMAKE_CURRENT_SOURCE_DIR}/third/kcf)
+                    ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 link_directories(${OpenCV_DIR}/lib/
                  ${CMAKE_CURRENT_SOURCE_DIR}/third/ncnn/lib)
