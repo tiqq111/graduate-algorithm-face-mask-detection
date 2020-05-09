@@ -37,9 +37,9 @@ set(OpenCV_LIBS opencv_core
 #         )
 
 FILE(GLOB_RECURSE SRC "include/*.h" "src/*.cpp" "example/*.cpp")        
-FILE(GLOB_RECURSE sourcefiles "third/kcf/*.cpp")
+# FILE(GLOB_RECURSE sourcefiles "third/kcf/*.cpp")
 
-add_executable(FaceDetector ${SRC} ${sourcefiles})
+add_executable(FaceDetector ${SRC})
 target_link_libraries(FaceDetector ncnn ${OpenCV_LIBS})
 if(OpenMP_CXX_FOUND)
     if(NCNN_CMAKE_VERBOSE)

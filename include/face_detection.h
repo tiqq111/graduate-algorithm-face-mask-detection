@@ -26,8 +26,6 @@ typedef unsigned char byte;
 #endif
 
 #include <opencv2/opencv.hpp>
-#include "kcftracker.hpp"
-
 using namespace std;
 
 struct FaceRect {
@@ -112,7 +110,7 @@ class FaceDetection {
       INPARA int& height,
       OUTPUT FaceRect* face_rect,
       OUTPUT float* score,
-      OUTPUT float* has_mask);
+      OUTPUT bool* has_mask);
 
   int DetectionMaxFace(
       INPARA byte* rgb,
@@ -120,7 +118,7 @@ class FaceDetection {
       INPARA int& height,
       OUTPUT FaceRect* face_rect,
       OUTPUT float* score,
-      OUTPUT float* has_mask,
+      OUTPUT bool* has_mask,
       OUTPUT int* track_id);
 
   /**
@@ -182,13 +180,12 @@ class FaceDetection {
 
  private:
   void* face_detector_;
-  bool has_cache_;
 
-  cv::Rect rect_cache_;
+  std::vector<cv::Rect> rect_cache_2_;
   float score_cache_;
   bool has_mask_cache_;
 
-  KCFTracker* tracker_;
+  // KCFTracker* tracker_;
 
   int max_thresh_;
   int cnt_;
