@@ -5,7 +5,7 @@
 Detector::Detector():
         _nms(0.4),
         _top_k(5),
-        _dim_w(260),
+        _dim_w(320),
         _threshold(0.6),
         _mean_val{104.f, 117.f, 123.f},
         Net(new ncnn::Net())
@@ -23,7 +23,7 @@ inline void Detector::Release(){
 Detector::Detector(const std::string &model_param, const std::string &model_bin):
         _nms(0.4),
         _top_k(5),
-        _dim_w(260),
+        _dim_w(320),
         _threshold(0.6),
         _mean_val{104.f, 117.f, 123.f},
         Net(new ncnn::Net())
@@ -39,25 +39,16 @@ int Detector::Init(const std::string &model_param, const std::string &model_bin)
     return 0;
 }
 
-// void Detector::track(const cv::Mat& bgr, std::vector<bbox>& boxes){
-//     cv::Mat frame(height, width, CV_8UC3, (void*)bgr_buf);
-// }
-
 int Detector::Detect(const cv::Mat& bgr, std::vector<bbox>& boxes)
 {
-    // Timer timer;
-    // timer.tic();
-    
-    // printf("INFO:detector in\n");
+
     int im_height = bgr.rows;
     int im_width = bgr.cols;
     int dim_w = _dim_w;
     int dim_h = _dim_w * im_height * 1.0 / (im_width * 1.0);
-    // printf("INFO:bgr(%d,%d),(%d,%d)\n",im_height,im_width,dim_w,dim_h);
+    // printf("INFO:bgr(%d,%d),(%d,%d)\n",im_width,im_height,dim_w,dim_h);
     ncnn::Mat in = ncnn::Mat::from_pixels_resize(bgr.data, ncnn::Mat::PIXEL_RGB, bgr.cols, bgr.rows, dim_w, dim_h);
     in.substract_mean_normalize(_mean_val, 0);
-    // timer.toc("precoss:");
-    // timer.tic();
     ncnn::Extractor ex = Net->create_extractor();
     ex.set_light_mode(true);
     ex.set_num_threads(4);
@@ -72,13 +63,9 @@ int Detector::Detect(const cv::Mat& bgr, std::vector<bbox>& boxes)
 
     // mask classification
     ex.extract("587", out2);
-
-    // timer.toc("det:");
-
+    
     std::vector<box> anchor;
-    // timer.tic();
     create_anchor_retinaface(anchor,  dim_w, dim_h);
-    // timer.toc("anchor:");
 
     std::vector<bbox> total_box;
     float *ptr = out.channel(0);

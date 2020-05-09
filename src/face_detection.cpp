@@ -24,8 +24,8 @@ int FaceDetection::Initial(INPARA char* model_path) {
   // Initialize face detector
   face_detector_ = new Detector;
   std::string model_path_s = model_path;
-  std::string model_path_param = model_path + std::string("/facemask.param");
-  std::string model_path_bin= model_path + std::string("/facemask.bin");
+  std::string model_path_param = model_path + std::string("/faceMask.param");
+  std::string model_path_bin= model_path + std::string("/faceMask.bin");
   printf("INFO:%s,%s\n",model_path_param.c_str(),model_path_bin.c_str());
   return ((Detector*)face_detector_)->Init(model_path_param, model_path_bin);
 }
@@ -65,9 +65,7 @@ int FaceDetection::DetectionMaxFace(
   cv::Mat image(height, width, CV_8UC3, (void*)bgr_buf);
   
   std::vector<bbox> face_infos;
-  // printf("INFO:image(%d,%d)\n",image.cols,image.rows);
   int ret =((Detector*)face_detector_)->Detect(image, face_infos);
-  // printf("INFO:face_infos.size():%d\n",face_infos.size());
   if (face_infos.size() <= 0) {
     return -2;
   }
