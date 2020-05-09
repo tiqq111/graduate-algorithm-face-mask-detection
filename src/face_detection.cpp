@@ -1,5 +1,6 @@
 #include "face_detection.h"
 #include "detector.h"
+#include <opencv2/opencv.hpp>
 
 FaceDetection::FaceDetection() : face_detector_(NULL) {}
 FaceDetection::~FaceDetection() {}
@@ -24,7 +25,7 @@ int FaceDetection::Initial(INPARA char* model_path) {
   std::string model_path_s = model_path;
   std::string model_path_param = model_path + std::string("/faceMask.param");
   std::string model_path_bin= model_path + std::string("/faceMask.bin");
-  printf("INFO:%s,%s\n",model_path_param.c_str(),model_path_bin.c_str());
+  // printf("INFO:%s,%s\n",model_path_param.c_str(),model_path_bin.c_str());
   return ((Detector*)face_detector_)->Init(model_path_param, model_path_bin);
 }
 
@@ -63,7 +64,9 @@ int FaceDetection::DetectionMaxFace(
   cv::Mat image(height, width, CV_8UC3, (void*)bgr_buf);
   
   std::vector<bbox> face_infos;
+
   int ret =((Detector*)face_detector_)->Detect(image, face_infos);
+
   if (face_infos.size() <= 0) {
     return -2;
   }
@@ -105,6 +108,9 @@ int FaceDetection::DetectionMaxFace(
 
   int ret = DetectionMaxFace(frame.data, frame.cols, frame.rows, face_rect, score, has_mask);
   if (ret != 0) {
+    if(rect_cache_2_.size()>0){
+        rect_cache_2_.erase(rect_cache_2_.begin());
+    }
     return ret;
   }
 
@@ -146,28 +152,30 @@ int FaceDetection::DetectionMaxFace(
         return ret;
       }
     }
-  }
-
-  if (face_rect->x < 0 || face_rect->y < 0 || face_rect->width+face_rect->x >= frame.cols
+  }else{
+    if (face_rect->x < 0 || face_rect->y < 0 || face_rect->width+face_rect->x >= frame.cols
     || face_rect->height+face_rect->y >= frame.rows) {
-    return -2;
+     return -2;
+    }
+
+    *track_id = track_id_;
+    cv::Rect rect_cache_;
+    rect_cache_.x = face_rect->x;
+    rect_cache_.y = face_rect->y;
+    rect_cache_.width = face_rect->width;
+    rect_cache_.height = face_rect->height;
+    rect_cache_2_.push_back(rect_cache_);
+
+    cnt_++;
+    if (cnt_ > 1000000) {
+      cnt_ = 0;
+    }
+    if (cnt_ % max_thresh_ == 0) {
+      return 0;
+    }
   }
 
-  *track_id = track_id_;
-  cv::Rect rect_cache_;
-  rect_cache_.x = face_rect->x;
-  rect_cache_.y = face_rect->y;
-  rect_cache_.width = face_rect->width;
-  rect_cache_.height = face_rect->height;
-  rect_cache_2_.push_back(rect_cache_);
-
-  cnt_++;
-  if (cnt_ > 1000000) {
-    cnt_ = 0;
-  }
-  if (cnt_ % max_thresh_ == 0) {
-    return 0;
-  }
+  
 
   return 0;
 }

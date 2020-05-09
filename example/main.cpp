@@ -39,7 +39,6 @@ int detectFromTxt(std::string txt_path){
         std::string image_path = std::string("/home/autobuild/wangzhen/data/1000_people/") + image_pathes[i].c_str();
         // image_path = "../data/123.jpg";
         printf("image_path:%s\n",image_path.c_str());
-        printf("- %d\n", __LINE__);
         cv::Mat img = cv::imread(image_path.c_str());
         printf("- %d,%d\n", img.cols,img.rows);
 
@@ -88,11 +87,13 @@ int detetFromVideo(std::string videoPath){
     detector.Initial("../model/");
     int index = 1;
     while(1){
+        printf("---------------------\n");
         cv::Mat img;
 
         capture>>img;
         cv::Mat img_scale = img;
         
+        cv::imwrite("./77.jpg",img_scale);
         // cout<<img_scale<<endl;
         if (!img_scale.data || img_scale.empty())
         {
@@ -120,15 +121,15 @@ int detetFromVideo(std::string videoPath){
         cv::putText(img, test, cv::Size((boxes.x/scale), boxes.y/scale), cv::FONT_HERSHEY_COMPLEX, 0.5, cv::Scalar(255, 255, 0));
         cv::putText(img, trackid, cv::Size((boxes.x/scale), boxes.y/scale + 15), cv::FONT_HERSHEY_COMPLEX, 0.5, cv::Scalar(255, 255, 0));
         
+        printf(" - index:%d\n",index);
         cv::imwrite(std::string("./detect_result_1000/") + std::to_string(index) + ".jpg" , img);
         index += 1;
     }
 }
 int main(int argc, char** argv)
 {
-
-    
     detetFromVideo("../data/test.mp4");
+    // detectFromTxt(argv[1]);
     return 0;
 }
 

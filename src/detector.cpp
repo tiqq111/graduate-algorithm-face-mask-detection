@@ -112,6 +112,10 @@ int Detector::Detect(const cv::Mat& bgr, std::vector<bbox>& boxes)
 
     }
 
+    if(total_box.size() <= 0){
+        return -2;
+    }
+
     std::sort(total_box.begin(), total_box.end(), cmp);
     std::vector<bbox> top_k_box;
     for (int i=0 ; i<_top_k ; i++){
