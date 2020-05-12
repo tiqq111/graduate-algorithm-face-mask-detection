@@ -114,6 +114,15 @@ int FaceDetection::DetectionMaxFace(
     return ret;
   }
 
+  if (face_rect->x < 0 || face_rect->y < 0 || face_rect->width < 0 || face_rect->height < 0  
+    || face_rect->width+face_rect->x >= frame.cols
+    || face_rect->height+face_rect->y >= frame.rows) {
+      if(rect_cache_2_.size()>0){
+        rect_cache_2_.erase(rect_cache_2_.begin());
+      }
+      return -2;
+  }
+
   bool pass = false;
   if (rect_cache_2_.size() > 0) {
     // Judge track ID
@@ -124,13 +133,7 @@ int FaceDetection::DetectionMaxFace(
         face_rect->width, face_rect->height) , rect_cache_) > track_thresh_) {
         *track_id = track_id_;  // if current bbox close to last result bbox
         pass = true;
-      } else {
-        *track_id = ++track_id_;
-      }
-
-      if (track_id_ == max_thresh_) {
-        track_id_ = 0;
-      }
+      } 
 
       // cache results
       has_mask_cache_ = *has_mask;
@@ -141,7 +144,7 @@ int FaceDetection::DetectionMaxFace(
       rect_cache_.height = face_rect->height;
 
       // remove first cache box
-      if(rect_cache_2_.size() == 2){
+      if(rect_cache_2_.size() == 3){
         rect_cache_2_.erase(rect_cache_2_.begin());
       }
       // add new box
@@ -152,30 +155,24 @@ int FaceDetection::DetectionMaxFace(
         return ret;
       }
     }
-  }else{
-    if (face_rect->x < 0 || face_rect->y < 0 || face_rect->width+face_rect->x >= frame.cols
-    || face_rect->height+face_rect->y >= frame.rows) {
-     return -2;
-    }
 
-    *track_id = track_id_;
+    if(!pass){
+        *track_id = ++track_id_;
+    }
+  }else{
+
+    *track_id = ++track_id_;
     cv::Rect rect_cache_;
     rect_cache_.x = face_rect->x;
     rect_cache_.y = face_rect->y;
     rect_cache_.width = face_rect->width;
     rect_cache_.height = face_rect->height;
     rect_cache_2_.push_back(rect_cache_);
-
-    cnt_++;
-    if (cnt_ > 1000000) {
-      cnt_ = 0;
-    }
-    if (cnt_ % max_thresh_ == 0) {
-      return 0;
-    }
   }
 
-  
+  if (track_id_ == max_thresh_) {
+    track_id_ = 0;
+  }
 
   return 0;
 }
