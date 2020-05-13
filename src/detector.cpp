@@ -125,6 +125,10 @@ int Detector::Detect(const cv::Mat& bgr, std::vector<bbox>& boxes)
 
     for (int j = 0; j < top_k_box.size(); ++j)
     {
+        float box_width = (top_k_box[j].x2 - top_k_box[j].x1) * 1.0 / im_height * dim_w;
+        if(box_width < 50.0f){
+            continue;
+        }
         boxes.push_back(top_k_box[j]);
     }
 
