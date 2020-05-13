@@ -135,26 +135,27 @@ int FaceDetection::DetectionMaxFace(
         pass = true;
       } 
 
-      // cache results
-      has_mask_cache_ = *has_mask;
-      score_cache_ = *score;
-      rect_cache_.x = face_rect->x;
-      rect_cache_.y = face_rect->y;
-      rect_cache_.width = face_rect->width;
-      rect_cache_.height = face_rect->height;
-
-      // remove first cache box
-      if(rect_cache_2_.size() == 3){
-        rect_cache_2_.erase(rect_cache_2_.begin());
-      }
-      // add new box
-      rect_cache_2_.push_back(rect_cache_);
-
       // pass return
       if(pass){
-        return ret;
+        break;
       }
     }
+
+    // cache results
+    cv::Rect rect_cache_;
+    has_mask_cache_ = *has_mask;
+    score_cache_ = *score;
+    rect_cache_.x = face_rect->x;
+    rect_cache_.y = face_rect->y;
+    rect_cache_.width = face_rect->width;
+    rect_cache_.height = face_rect->height;
+
+    // remove first cache box
+    if(rect_cache_2_.size() == 3){
+      rect_cache_2_.erase(rect_cache_2_.begin());
+    }
+    // add new box
+    rect_cache_2_.push_back(rect_cache_);
 
     if(!pass){
         *track_id = ++track_id_;
