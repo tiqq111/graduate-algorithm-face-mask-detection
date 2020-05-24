@@ -1,18 +1,15 @@
 #include <algorithm>
-//#include "omp.h"
 #include "detector.h"
 
-Detector::Detector():
-        _nms(0.4),
-        _top_k(5),
-        _dim_w(320),
-        _threshold(0.6),
-        _mean_val{104.f, 117.f, 123.f},
-        Net(new ncnn::Net())
+Detector::Detector() : _nms(0.4),
+                       _threshold(0.6),
+                       _mean_val{104.f, 117.f, 123.f},
+                       Net(new ncnn::Net())
 {
 }
 
-inline void Detector::Release(){
+inline void Detector::Release()
+{
     if (Net != nullptr)
     {
         delete Net;
@@ -20,13 +17,10 @@ inline void Detector::Release(){
     }
 }
 
-Detector::Detector(const std::string &model_param, const std::string &model_bin):
-        _nms(0.4),
-        _top_k(5),
-        _dim_w(320),
-        _threshold(0.6),
-        _mean_val{104.f, 117.f, 123.f},
-        Net(new ncnn::Net())
+Detector::Detector(const std::string &model_param, const std::string &model_bin) : _nms(0.4),
+                                                                                   _threshold(0.6),
+                                                                                   _mean_val{104.f, 117.f, 123.f},
+                                                                                   Net(new ncnn::Net())
 {
     Init(model_param, model_bin);
 }
@@ -39,15 +33,10 @@ int Detector::Init(const std::string &model_param, const std::string &model_bin)
     return 0;
 }
 
-int Detector::Detect(const cv::Mat& bgr, std::vector<bbox>& boxes)
+int Detector::Detect(const cv::Mat &bgr, std::vector<bbox> &boxes)
 {
 
-    int im_height = bgr.rows;
-    int im_width = bgr.cols;
-    int dim_w = _dim_w;
-    int dim_h = _dim_w * im_height * 1.0 / (im_width * 1.0);
-    // printf("INFO:bgr(%d,%d),(%d,%d)\n",im_width,im_height,dim_w,dim_h);
-    ncnn::Mat in = ncnn::Mat::from_pixels_resize(bgr.data, ncnn::Mat::PIXEL_RGB, bgr.cols, bgr.rows, dim_w, dim_h);
+    ncnn::Mat in = ncnn::Mat::from_pixels_resize(bgr.data, ncnn::Mat::PIXEL_RGB, bgr.cols, bgr.rows, bgr.cols, bgr.rows);
     in.substract_mean_normalize(_mean_val, 0);
     ncnn::Extractor ex = Net->create_extractor();
     ex.set_light_mode(true);
@@ -63,9 +52,9 @@ int Detector::Detect(const cv::Mat& bgr, std::vector<bbox>& boxes)
 
     // mask classification
     ex.extract("587", out2);
-    
+
     std::vector<box> anchor;
-    create_anchor_retinaface(anchor,  dim_w, dim_h);
+    create_anchor_retinaface(anchor, bgr.cols, bgr.rows);
 
     std::vector<bbox> total_box;
     float *ptr = out.channel(0);
@@ -75,7 +64,7 @@ int Detector::Detect(const cv::Mat& bgr, std::vector<bbox>& boxes)
     // #pragma omp parallel for num_threads(2)'
     for (int i = 0; i < anchor.size(); ++i)
     {
-        if (*(ptr1+ 1) > _threshold)
+        if (*(ptr1 + 1) > _threshold)
         {
             box tmp = anchor[i];
             box tmp1;
@@ -83,24 +72,24 @@ int Detector::Detect(const cv::Mat& bgr, std::vector<bbox>& boxes)
 
             // loc and conf
             tmp1.cx = tmp.cx + *ptr * 0.1 * tmp.sx;
-            tmp1.cy = tmp.cy + *(ptr+1) * 0.1 * tmp.sy;
-            tmp1.sx = tmp.sx * exp(*(ptr+2) * 0.2);
-            tmp1.sy = tmp.sy * exp(*(ptr+3) * 0.2);
+            tmp1.cy = tmp.cy + *(ptr + 1) * 0.1 * tmp.sy;
+            tmp1.sx = tmp.sx * exp(*(ptr + 2) * 0.2);
+            tmp1.sy = tmp.sy * exp(*(ptr + 3) * 0.2);
 
-            result.x1 = (tmp1.cx - tmp1.sx/2) * im_width;
+            result.x1 = (tmp1.cx - tmp1.sx / 2) * in.w;
 
-            if (result.x1<0)
+            if (result.x1 < 0)
                 result.x1 = 0;
-            result.y1 = (tmp1.cy - tmp1.sy/2) * im_height;
+            result.y1 = (tmp1.cy - tmp1.sy / 2) * in.h;
 
-            if (result.y1<0)
+            if (result.y1 < 0)
                 result.y1 = 0;
-            result.x2 = (tmp1.cx + tmp1.sx/2) * im_width;
-            if (result.x2>im_width)
-                result.x2 = im_width;
-            result.y2 = (tmp1.cy + tmp1.sy/2)* im_height;
-            if (result.y2>im_height)
-                result.y2 = im_height;
+            result.x2 = (tmp1.cx + tmp1.sx / 2) * in.w;
+            if (result.x2 > in.w)
+                result.x2 = in.w;
+            result.y2 = (tmp1.cy + tmp1.sy / 2) * in.h;
+            if (result.y2 > in.h)
+                result.y2 = in.h;
             result.face_s = *(ptr1 + 1);
             result.mask_s = *(ptr2 + 1);
 
@@ -109,61 +98,56 @@ int Detector::Detect(const cv::Mat& bgr, std::vector<bbox>& boxes)
         ptr += 4;
         ptr1 += 2;
         ptr2 += 2;
-
     }
 
-    if(total_box.size() <= 0){
+    if (total_box.size() <= 0)
+    {
         return -2;
     }
 
     std::sort(total_box.begin(), total_box.end(), cmp);
-    std::vector<bbox> top_k_box;
-    for (int i=0 ; i<_top_k ; i++){
-        top_k_box.push_back(total_box[i]);
-    }
-    nms(top_k_box, _nms);
+    nms(total_box, _nms);
 
-    for (int j = 0; j < top_k_box.size(); ++j)
+    for (int j = 0; j < total_box.size(); ++j)
     {
-        float box_width = (top_k_box[j].x2 - top_k_box[j].x1) * 1.0 / im_height * dim_w;
-        if(box_width < 50.0f){
-            continue;
-        }
-        boxes.push_back(top_k_box[j]);
+        boxes.push_back(total_box[j]);
     }
 
     return 0;
 }
 
-inline bool Detector::cmp(bbox a, bbox b) {
+inline bool Detector::cmp(bbox a, bbox b)
+{
     if (a.face_s > b.face_s)
         return true;
     return false;
 }
 
-inline void Detector::SetDefaultParams(){
+inline void Detector::SetDefaultParams()
+{
     _nms = 0.4;
     _threshold = 0.6;
     _mean_val[0] = 104;
     _mean_val[1] = 117;
     _mean_val[2] = 123;
     Net = nullptr;
-
 }
 
-Detector::~Detector(){
+Detector::~Detector()
+{
     Release();
 }
 
 void Detector::create_anchor_retinaface(std::vector<box> &anchor, int w, int h)
 {
-//    anchor.reserve(num_boxes);
+    //    anchor.reserve(num_boxes);
     anchor.clear();
-    std::vector<std::vector<int> > feature_map(3), min_sizes(3);
+    std::vector<std::vector<int>> feature_map(3), min_sizes(3);
     float steps[] = {8, 16, 32};
-    for (int i = 0; i < feature_map.size(); ++i) {
-        feature_map[i].push_back(ceil(h/steps[i]));
-        feature_map[i].push_back(ceil(w/steps[i]));
+    for (int i = 0; i < feature_map.size(); ++i)
+    {
+        feature_map[i].push_back(ceil(h / steps[i]));
+        feature_map[i].push_back(ceil(w / steps[i]));
     }
     std::vector<int> minsize1 = {8, 16};
     min_sizes[0] = minsize1;
@@ -182,26 +166,24 @@ void Detector::create_anchor_retinaface(std::vector<box> &anchor, int w, int h)
                 for (int l = 0; l < min_size.size(); ++l)
                 {
                     // divide w or h is normalization
-                    float s_kx = min_size[l]*1.0/w;
-                    float s_ky = min_size[l]*1.0/h;
-                    float cx = (j + 0.5) * steps[k]/w;
-                    float cy = (i + 0.5) * steps[k]/h;
+                    float s_kx = min_size[l] * 1.0 / w;
+                    float s_ky = min_size[l] * 1.0 / h;
+                    float cx = (j + 0.5) * steps[k] / w;
+                    float cy = (i + 0.5) * steps[k] / h;
                     box axil = {cx, cy, s_kx, s_ky};
                     anchor.push_back(axil);
                 }
             }
         }
     }
-
 }
 
 void Detector::nms(std::vector<bbox> &input_boxes, float NMS_THRESH)
 {
-    std::vector<float>vArea(input_boxes.size());
+    std::vector<float> vArea(input_boxes.size());
     for (int i = 0; i < int(input_boxes.size()); ++i)
     {
-        vArea[i] = (input_boxes.at(i).x2 - input_boxes.at(i).x1 + 1)
-                   * (input_boxes.at(i).y2 - input_boxes.at(i).y1 + 1);
+        vArea[i] = (input_boxes.at(i).x2 - input_boxes.at(i).x1 + 1) * (input_boxes.at(i).y2 - input_boxes.at(i).y1 + 1);
     }
     for (int i = 0; i < int(input_boxes.size()); ++i)
     {
@@ -212,8 +194,8 @@ void Detector::nms(std::vector<bbox> &input_boxes, float NMS_THRESH)
             float xx2 = std::min(input_boxes[i].x2, input_boxes[j].x2);
             float yy2 = std::min(input_boxes[i].y2, input_boxes[j].y2);
             float w = std::max(float(0), xx2 - xx1 + 1);
-            float   h = std::max(float(0), yy2 - yy1 + 1);
-            float   inter = w * h;
+            float h = std::max(float(0), yy2 - yy1 + 1);
+            float inter = w * h;
             float ovr = inter / (vArea[i] + vArea[j] - inter);
             if (ovr >= NMS_THRESH)
             {
