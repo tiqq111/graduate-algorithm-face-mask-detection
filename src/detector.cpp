@@ -2,7 +2,7 @@
 #include "detector.h"
 
 Detector::Detector() : _nms(0.4),
-                       _threshold(0.6),
+                       _threshold(0.85),
                        _mean_val{104.f, 117.f, 123.f},
                        Net(new ncnn::Net())
 {
@@ -18,7 +18,7 @@ inline void Detector::Release()
 }
 
 Detector::Detector(const std::string &model_param, const std::string &model_bin) : _nms(0.4),
-                                                                                   _threshold(0.6),
+                                                                                   _threshold(0.85),
                                                                                    _mean_val{104.f, 117.f, 123.f},
                                                                                    Net(new ncnn::Net())
 {
@@ -126,7 +126,7 @@ inline bool Detector::cmp(bbox a, bbox b)
 inline void Detector::SetDefaultParams()
 {
     _nms = 0.4;
-    _threshold = 0.6;
+    _threshold = 0.85;
     _mean_val[0] = 104;
     _mean_val[1] = 117;
     _mean_val[2] = 123;
